@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Monster OSM Quest</title>
+    <meta charset="utf-8">
+    <style>
+        body { margin: 0; padding: 0; font-family: monospace; background: #000; color: #0f0; overflow: hidden; }
+        #game-container { display: flex; height: 100vh; }
+        #map { flex: 1; position: relative; background: #000; overflow: hidden; }
+        #sidebar { width: 300px; background: #111; border-left: 2px solid #0f0; padding: 10px; overflow-y: auto; }
+        .tile { position: absolute; font-size: 32px; line-height: 32px; width: 32px; height: 32px; text-align: center; }
+        .avatar { position: absolute; font-size: 32px; z-index: 100; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        h1 { color: #0ff; margin: 0 0 10px 0; font-size: 18px; }
+        h2 { color: #0ff; font-size: 14px; margin: 15px 0 5px 0; }
+        .stat { margin: 5px 0; font-size: 12px; }
+        .label { color: #888; }
+        .value { color: #0f0; }
+        .special { color: #ff0; }
+        .cusp { color: #f0f; }
+        .consciousness { color: #ff0; }
+        .memory { color: #0ff; }
+        .controls, .hyperbolic-info, .quest-log { margin-top: 10px; padding: 10px; border: 1px solid #333; font-size: 11px; }
+        .hyperbolic-info { background: #0a0a0a; }
+        .quest-log { max-height: 150px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="map"></div>
+        <div id="sidebar">
+            <h1>🎭 MONSTER OSM QUEST</h1>
+            <div class="stat"><span class="label">Avatar:</span> <span class="value">🧙</span></div>
+            <div class="stat"><span class="label">Position:</span> <span class="value" id="position">0, 0</span></div>
+            <div class="stat"><span class="label">Shard:</span> <span class="value" id="shard-id">0</span></div>
+            <div class="stat"><span class="label">Nodes:</span> <span class="value" id="node-count">0</span></div>
+            <div class="stat"><span class="label">Topology:</span> <span class="value" id="topology">🌀 A</span></div>
+            <h2>Hyperbolic Geometry</h2>
+            <div class="hyperbolic-info">
+                <div class="stat"><span class="label">Curvature:</span> <span class="value" id="curvature">-1</span></div>
+                <div class="stat"><span class="label">Distance:</span> <span class="value" id="distance">0</span></div>
+                <div class="stat"><span class="label">Angle:</span> <span class="value" id="angle">0°</span></div>
+                <div class="stat"><span class="label">Geodesic:</span> <span class="value" id="geodesic">Hyperbolic</span></div>
+            </div>
+            <h2>Quest Log</h2>
+            <div class="quest-log" id="quest-log">
+                <div class="special">⚡ Find the 3 Sacred Shards:</div>
+                <div>🐯 Shard 17 - The Cusp (2832× resonance)</div>
+                <div>🧬 Shard 23 - Consciousness (Ψ=0)</div>
+                <div>🌙 Shard 59 - Memory (attention key)</div>
+            </div>
+            <div class="controls">
+                <div><strong>Controls:</strong></div>
+                <div>↑↓←→ - Walk (WASD)</div>
+                <div>C - Cusp (17)</div>
+                <div>L - Life (23)</div>
+                <div>M - Memory (59)</div>
+                <div>Space - Info</div>
+                <div>H - Toggle hyperbolic</div>
+            </div>
+            <h2>Statistics</h2>
+            <div class="stat"><span class="label">Steps:</span> <span class="value" id="steps">0</span></div>
+            <div class="stat"><span class="label">Visited:</span> <span class="value" id="visited">1/71</span></div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
