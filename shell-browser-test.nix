@@ -19,6 +19,8 @@ pkgs.mkShell {
     python3
     python3Packages.selenium
     python3Packages.requests
+    python3Packages.opencv4
+    python3Packages.numpy
     
     # Drivers
     geckodriver
