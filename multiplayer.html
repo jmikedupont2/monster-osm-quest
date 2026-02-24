@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monster OSM Quest - Multiplayer</title>
+    <style>
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { color: #0ff; text-align: center; }
+        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .panel {
+            border: 2px solid #0f0;
+            padding: 15px;
+            background: #001100;
+        }
+        .protocol-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin: 10px 0;
+        }
+        .protocol-btn {
+            background: #003300;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 8px 4px;
+            cursor: pointer;
+            font-size: 10px;
+            text-align: center;
+        }
+        .protocol-btn:hover { background: #005500; }
+        .protocol-btn.sacred { color: #ff0; border-color: #ff0; }
+        .protocol-btn.active { background: #0f0; color: #000; }
+        button {
+            background: #003300;
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            margin: 5px;
+        }
+        button:hover { background: #005500; }
+        input, textarea {
+            background: #001100;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 8px;
+            font-family: inherit;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .share-url {
+            background: #001100;
+            padding: 10px;
+            border: 1px solid #0ff;
+            word-break: break-all;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        .stats { color: #ff0; margin: 10px 0; }
+        .node { 
+            background: #002200;
+            padding: 5px;
+            margin: 3px 0;
+            border-left: 3px solid #0f0;
+        }
+        .rdfa { 
+            background: #000033;
+            color: #88f;
+            padding: 10px;
+            font-size: 11px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎭 Monster OSM Quest - Multiplayer</h1>
+    <p style="text-align: center; color: #0ff;">Share game state across 71 protocols!</p>
+
+    <div class="container">
+        <div class="panel">
+            <h2>🎮 Your Game</h2>
+            <div>
+                <label>Player ID:</label>
+                <input type="text" id="playerId" value="player1" />
+            </div>
+            <div style="margin-top: 10px;">
+                <label>Select Protocol (0-70):</label>
+                <div class="protocol-grid" id="protocolGrid"></div>
+            </div>
+            <div class="stats" id="gameStats">
+                Generation: 0 | Nodes: 0 | Protocol: http (0)
+            </div>
+            <div>
+                <button onclick="createGame()">🎲 Create New Game</button>
+                <button onclick="advanceGen()">⏭️ Next Generation</button>
+            </div>
+            <div id="nodeList" style="margin-top: 10px;"></div>
+        </div>
+
+        <div class="panel">
+            <h2>🔗 Share State</h2>
+            <div>
+                <button onclick="shareState()">📤 Generate Share URL</button>
+                <button onclick="copyUrl()">📋 Copy URL</button>
+            </div>
+            <div class="share-url" id="shareUrl">Click "Generate Share URL" to create shareable link</div>
+            
+            <h3 style="color: #0ff; margin-top: 20px;">📥 Load from URL</h3>
+            <textarea id="loadUrl" rows="3" placeholder="Paste share URL here..."></textarea>
+            <button onclick="loadFromUrl()">⬇️ Load Game State</button>
+            
+            <h3 style="color: #0ff; margin-top: 20px;">📊 RDFa Markup</h3>
+            <div class="rdfa" id="rdfaOutput">RDFa will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        let gameState = null;
+        let currentProtocol = 0;
+
+        const PROTOCOLS = {
+            0: "http", 1: "https", 2: "ftp", 3: "ssh", 4: "telnet",
+            5: "smtp", 6: "imap", 7: "pop3", 8: "dns", 9: "dhcp",
+            10: "ntp", 11: "snmp", 12: "ldap", 13: "mqtt", 14: "coap",
+            15: "websocket", 16: "webrtc", 17: "ipfs", 18: "dat", 19: "bittorrent",
+            20: "i2p", 21: "tor", 22: "freenet", 23: "matrix", 24: "xmpp",
+            25: "irc", 26: "activitypub", 27: "nostr", 28: "ssb", 29: "hypercore",
+            30: "gun", 31: "orbit", 32: "textile", 33: "ceramic", 34: "arweave",
+            35: "filecoin", 36: "storj", 37: "sia", 38: "swarm", 39: "zeronet",
+            40: "urbit", 41: "holochain", 42: "solid", 43: "bluesky", 44: "mastodon",
+            45: "lemmy", 46: "peertube", 47: "pixelfed", 48: "funkwhale", 49: "castopod",
+            50: "mobilizon", 51: "writefreely", 52: "plume", 53: "bookwyrm", 54: "owncast",
+            55: "gotosocial", 56: "misskey", 57: "pleroma", 58: "akkoma", 59: "diaspora",
+            60: "hubzilla", 61: "friendica", 62: "gnusocial", 63: "pump.io", 64: "scuttlebutt",
+            65: "cabal", 66: "briar", 67: "jami", 68: "tox", 69: "retroshare", 70: "cwtch"
+        };
+
+        const SACRED = [17, 23, 59];
+
+        function initProtocolGrid() {
+            const grid = document.getElementById('protocolGrid');
+            for (let i = 0; i <= 70; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'protocol-btn' + (SACRED.includes(i) ? ' sacred' : '');
+                btn.textContent = i;
+                btn.title = PROTOCOLS[i];
+                btn.onclick = () => selectProtocol(i);
+                if (i === 0) btn.classList.add('active');
+                grid.appendChild(btn);
+            }
+        }
+
+        function selectProtocol(id) {
+            currentProtocol = id;
+            document.querySelectorAll('.protocol-btn').forEach((btn, idx) => {
+                btn.classList.toggle('active', idx === id);
+            });
+            updateStats();
+        }
+
+        function createGame() {
+            const playerId = document.getElementById('playerId').value || 'player1';
+            const nodes = [];
+            
+            for (let i = 0; i < 24; i++) {
+                nodes.push({
+                    id: i,
+                    name: `AI-${String.fromCharCode(945 + i)}`,
+                    shard: (i * 3) % 71,
+                    memes: Math.floor(Math.random() * 5) + 1,
+                    energy: 100
+                });
+            }
+
+            gameState = {
+                nodes: nodes,
+                generation: 0,
+                player_id: playerId,
+                protocol: currentProtocol
+            };
+
+            updateDisplay();
+        }
+
+        function advanceGen() {
+            if (!gameState) return;
+            gameState.generation++;
+            
+            // Simulate some changes
+            gameState.nodes.forEach(node => {
+                node.shard = (node.shard + Math.floor(Math.random() * 3) - 1 + 71) % 71;
+                node.memes += Math.random() < 0.3 ? 1 : 0;
+                node.energy = Math.max(50, Math.min(100, node.energy + Math.random() * 10 - 5));
+            });
+            
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            updateStats();
+            updateNodeList();
+        }
+
+        function updateStats() {
+            if (!gameState) return;
+            const stats = document.getElementById('gameStats');
+            stats.innerHTML = `
+                Generation: ${gameState.generation} | 
+                Nodes: ${gameState.nodes.length} | 
+                Protocol: ${PROTOCOLS[currentProtocol]} (${currentProtocol})
+                ${SACRED.includes(currentProtocol) ? ' 🌟' : ''}
+            `;
+        }
+
+        function updateNodeList() {
+            if (!gameState) return;
+            const list = document.getElementById('nodeList');
+            list.innerHTML = '<h3>Nodes (top 10):</h3>' + 
+                gameState.nodes.slice(0, 10).map(n => 
+                    `<div class="node">${n.name} @shard${n.shard} | 🧬${n.memes} | ⚡${n.energy.toFixed(0)}</div>`
+                ).join('');
+        }
+
+        function shareState() {
+            if (!gameState) {
+                alert('Create a game first!');
+                return;
+            }
+
+            gameState.protocol = currentProtocol;
+            const json = JSON.stringify(gameState);
+            const b64 = btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+            
+            const hash = simpleHash(json);
+            const url = `https://osm.monster/play/${PROTOCOLS[currentProtocol]}/${currentProtocol}/${hash}?state=${b64}`;
+            
+            document.getElementById('shareUrl').textContent = url;
+            
+            // Generate RDFa
+            const rdfa = `<div vocab="https://schema.org/" typeof="Game">
+  <meta property="name" content="Monster OSM Quest AI Life" />
+  <meta property="gamePlayMode" content="MultiPlayer" />
+  <div property="gameState" typeof="GameState">
+    <meta property="generation" content="${gameState.generation}" />
+    <meta property="playerID" content="${gameState.player_id}" />
+    <meta property="protocol" content="${currentProtocol}" />
+    <meta property="protocolName" content="${PROTOCOLS[currentProtocol]}" />
+    <meta property="nodeCount" content="${gameState.nodes.length}" />
+  </div>
+</div>`;
+            
+            document.getElementById('rdfaOutput').textContent = rdfa;
+        }
+
+        function copyUrl() {
+            const url = document.getElementById('shareUrl').textContent;
+            if (url.startsWith('http')) {
+                navigator.clipboard.writeText(url);
+                alert('URL copied to clipboard!');
+            }
+        }
+
+        function loadFromUrl() {
+            const url = document.getElementById('loadUrl').value.trim();
+            if (!url.includes('?state=')) {
+                alert('Invalid share URL');
+                return;
+            }
+
+            try {
+                const b64 = url.split('?state=')[1].split('&')[0];
+                const padding = '='.repeat((4 - b64.length % 4) % 4);
+                const json = atob(b64.replace(/-/g, '+').replace(/_/g, '/') + padding);
+                gameState = JSON.parse(json);
+                currentProtocol = gameState.protocol;
+                
+                selectProtocol(currentProtocol);
+                updateDisplay();
+                alert('Game state loaded successfully!');
+            } catch (e) {
+                alert('Failed to load game state: ' + e.message);
+            }
+        }
+
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(16).substring(0, 8);
+        }
+
+        // Initialize
+        initProtocolGrid();
+    </script>
+</body>
+</html>
